@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { findCssModuleForTsx, findClassRanges } from './css-finder';
-import { getCssModuleImportIdentifier, getClassNameAtCursorWithIdentifier } from './tsx-parser';
+import { getCssModuleImportIdentifier, getClassNamesAtCursor } from './tsx-parser';
 
 let highlightDecoration: vscode.TextEditorDecorationType | undefined;
 
@@ -69,9 +69,9 @@ async function updateHighlight(tsxEditor: vscode.TextEditor): Promise<void> {
         return;
     }
 
-    // 커서 위치에서 클래스명 추출
-    const className = getClassNameAtCursorWithIdentifier(document, position, identifier);
-    if (!className) {
+    // 커서가 포함된 { } 블록 안의 모든 클래스명 추출
+    const classNames = getClassNamesAtCursor(document, position, identifier);
+    if (classNames.length === 0) {
         return;
     }
 
@@ -81,11 +81,11 @@ async function updateHighlight(tsxEditor: vscode.TextEditor): Promise<void> {
         return;
     }
 
-    // CSS 파일의 탭 에디터를 가져오거나 열기
+    // CSS 파일 Document 열기 (탭은 열지 않음)
     const cssDocument = await vscode.workspace.openTextDocument(cssUri);
 
-    // 하이라이트할 범위 찾기
-    const ranges = findClassRanges(cssDocument, className);
+    // 모든 클래스명에 대한 하이라이트 범위 수집
+    const ranges = classNames.flatMap(cls => findClassRanges(cssDocument, cls));
     if (ranges.length === 0) {
         return;
     }
