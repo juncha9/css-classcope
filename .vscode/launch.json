@@ -1,0 +1,44 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+
+		{
+			"name": "debug",
+			"type": "extensionHost",
+			"request": "launch",
+			"args": [
+				"${workspaceFolder}/samples",
+				"--extensionDevelopmentPath=${workspaceFolder}"
+			],
+			"outFiles": [
+				"${workspaceFolder}/dist/**/*.js"
+			],
+			"preLaunchTask": "${defaultBuildTask}"
+		},
+		{
+            "name": "build",
+            "command": "npm run build",
+            "request": "launch",
+            "type": "node-terminal",
+            "cwd": "${workspaceFolder}",
+            "outputCapture": "console",
+        },
+		{
+            "name": "package",
+            "command": "npm run package",
+            "request": "launch",
+            "type": "node-terminal",
+            "cwd": "${workspaceFolder}",
+            "outputCapture": "console",
+        },
+		{
+            "name": "publish",
+            "command": "npm run publish",
+            "request": "launch",
+            "type": "node-terminal",
+            "cwd": "${workspaceFolder}",
+            "outputCapture": "console",
+        },
+
+	]
+}

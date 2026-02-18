@@ -27,10 +27,11 @@
         }
     },
     "scripts": {
-        "vscode:prepublish": "npm run compile",
-        "compile": "tsc -p ./",
+        "build": "tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "test": "vscode-test"
+        "test": "vscode-test",
+        "package": "npx @vscode/vsce package",
+        "publish": "npx @vscode/vsce publish"
     },
     "devDependencies": {
         "@types/node": "^22.0.0",
