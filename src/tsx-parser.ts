@@ -12,18 +12,29 @@ export function getCssModuleImportIdentifier(document: vscode.TextDocument): str
     return match ? match[1] : undefined;
 }
 
+export interface ThreeLevelClassNames {
+    parent: string[];   // 상위 1레벨 엘리먼트의 className들
+    current: string[];  // 커서 위치 엘리먼트의 className들
+    children: string[]; // 직접 자식 엘리먼트들의 className들 (모두 한 그룹)
+}
+
 /**
- * 커서 위치를 포함하는 JSX 엘리먼트의 className에서
- * identifier.XXX 클래스명만 추출합니다. (자식 추적 없음)
+ * 커서 위치 기준으로 상위 1개 / 현재 / 하위 1레벨의 className을 반환합니다.
  *
- * 예: 커서가 <div className={clsx(styles.panel, styles.active)}> 위에 있으면
- * → ['panel', 'active']
+ * 예:
+ *   <section className={styles.wrapper}>       ← parent (🔵)
+ *     <div className={styles.panel}>           ← current (🟡) ← 커서
+ *       <h3 className={styles.title}/>         ← children (🟢)
+ *       <p className={styles.body}/>           ← children (🟢)
+ *     </div>
+ *   </section>
  */
-export function getClassNamesAtElement(
+export function getThreeLevelClassNames(
     document: vscode.TextDocument,
     position: vscode.Position,
     identifier: string
-): string[] {
+): ThreeLevelClassNames {
+    const empty: ThreeLevelClassNames = { parent: [], current: [], children: [] };
     const sourceText = document.getText();
     const offset = document.offsetAt(position);
 
@@ -35,26 +46,56 @@ export function getClassNamesAtElement(
         ts.ScriptKind.TSX
     );
 
-    // 커서를 포함하는 가장 작은 JSX 엘리먼트 찾기
+    // 커서를 포함하는 가장 작은 JSX 엘리먼트와 그 직접 부모 찾기
     let innermostJsx: ts.JsxElement | ts.JsxSelfClosingElement | undefined;
+    let parentJsx: ts.JsxElement | ts.JsxSelfClosingElement | undefined;
 
-    function findInnermost(node: ts.Node): void {
-        if ((ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) &&
-            node.pos <= offset && offset <= node.end) {
-            innermostJsx = node as ts.JsxElement | ts.JsxSelfClosingElement;
+    function findNodes(node: ts.Node, lastJsx?: ts.JsxElement | ts.JsxSelfClosingElement): void {
+        const isJsx = ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node);
+        if (node.pos <= offset && offset <= node.end) {
+            if (isJsx) {
+                parentJsx = lastJsx;
+                innermostJsx = node as ts.JsxElement | ts.JsxSelfClosingElement;
+                ts.forEachChild(node, child => findNodes(child, innermostJsx));
+            } else {
+                ts.forEachChild(node, child => findNodes(child, lastJsx));
+            }
         }
-        ts.forEachChild(node, findInnermost);
     }
 
-    findInnermost(sourceFile);
-    if (!innermostJsx) { return []; }
+    findNodes(sourceFile);
+    if (!innermostJsx) { return empty; }
 
-    // 해당 엘리먼트의 attributes만 스캔 (자식 제외)
-    const openingAttrs = ts.isJsxElement(innermostJsx)
+    // 현재 엘리먼트 className
+    const currentAttrs = ts.isJsxElement(innermostJsx)
         ? innermostJsx.openingElement.attributes
         : innermostJsx.attributes;
+    const current = collectClassNamesFromNode(currentAttrs, sourceFile, identifier);
 
-    return collectClassNamesFromNode(openingAttrs, sourceFile, identifier);
+    // 부모 엘리먼트 className
+    let parent: string[] = [];
+    if (parentJsx) {
+        const parentAttrs = ts.isJsxElement(parentJsx)
+            ? parentJsx.openingElement.attributes
+            : parentJsx.attributes;
+        parent = collectClassNamesFromNode(parentAttrs, sourceFile, identifier);
+    }
+
+    // 직접 자식 엘리먼트들의 className (하위 1레벨만, 모두 한 그룹)
+    const childNames = new Set<string>();
+    if (ts.isJsxElement(innermostJsx)) {
+        for (const child of innermostJsx.children) {
+            if (ts.isJsxElement(child) || ts.isJsxSelfClosingElement(child)) {
+                const attrs = ts.isJsxElement(child)
+                    ? child.openingElement.attributes
+                    : child.attributes;
+                collectClassNamesFromNode(attrs, sourceFile, identifier)
+                    .forEach(n => childNames.add(n));
+            }
+        }
+    }
+
+    return { parent, current, children: [...childNames] };
 }
 
 /**
