@@ -13,24 +13,17 @@ export function getCssModuleImportIdentifier(document: vscode.TextDocument): str
 }
 
 /**
- * 커서 위치를 포함하는 JSX 엘리먼트의 직접 자식들을 그룹으로 반환합니다.
- * 각 그룹은 하나의 자식 서브트리(자식 + 그 하위 자식들)의 className 목록입니다.
+ * 커서 위치를 포함하는 JSX 엘리먼트의 className에서
+ * identifier.XXX 클래스명만 추출합니다. (자식 추적 없음)
  *
- * 예:
- *   <div>              ← 커서가 여기 있으면
- *     <h3 className={styles.title}/>   ← 그룹 1
- *     <section className={styles.body}>
- *       <span className={styles.text}/> ← 그룹 2 (section 서브트리)
- *     </section>
- *   </div>
- *
- * → [['title'], ['body', 'text']]
+ * 예: 커서가 <div className={clsx(styles.panel, styles.active)}> 위에 있으면
+ * → ['panel', 'active']
  */
-export function getChildGroupsAtCursor(
+export function getClassNamesAtElement(
     document: vscode.TextDocument,
     position: vscode.Position,
     identifier: string
-): Array<{ classNames: string[] }> {
+): string[] {
     const sourceText = document.getText();
     const offset = document.offsetAt(position);
 
@@ -56,48 +49,12 @@ export function getChildGroupsAtCursor(
     findInnermost(sourceFile);
     if (!innermostJsx) { return []; }
 
-    // 직접 자식 JSX 엘리먼트 추출 (JsxSelfClosingElement는 자식 없음)
-    const directChildren: Array<ts.JsxElement | ts.JsxSelfClosingElement> = [];
+    // 해당 엘리먼트의 attributes만 스캔 (자식 제외)
+    const openingAttrs = ts.isJsxElement(innermostJsx)
+        ? innermostJsx.openingElement.attributes
+        : innermostJsx.attributes;
 
-    if (ts.isJsxElement(innermostJsx)) {
-        for (const child of innermostJsx.children) {
-            if (ts.isJsxElement(child) || ts.isJsxSelfClosingElement(child)) {
-                directChildren.push(child);
-            } else if (ts.isJsxExpression(child) && child.expression) {
-                // {condition && <Element />} 또는 {a ? <A/> : <B/>} 처리
-                collectJsxFromExpression(child.expression, directChildren);
-            }
-        }
-    }
-
-    if (directChildren.length === 0) { return []; }
-
-    // 각 자식 서브트리의 classNames 수집
-    return directChildren
-        .map(child => ({
-            classNames: collectClassNamesFromNode(child, sourceFile, identifier),
-        }))
-        .filter(g => g.classNames.length > 0);
-}
-
-/**
- * JSX 표현식 내부에서 JSX 엘리먼트를 재귀적으로 찾습니다.
- * {condition && <A/>} 또는 {flag ? <A/> : <B/>} 같은 패턴 처리용
- */
-function collectJsxFromExpression(
-    expr: ts.Expression,
-    out: Array<ts.JsxElement | ts.JsxSelfClosingElement>
-): void {
-    if (ts.isJsxElement(expr) || ts.isJsxSelfClosingElement(expr)) {
-        out.push(expr);
-    } else if (ts.isBinaryExpression(expr)) {
-        collectJsxFromExpression(expr.right, out);
-    } else if (ts.isConditionalExpression(expr)) {
-        collectJsxFromExpression(expr.whenTrue, out);
-        collectJsxFromExpression(expr.whenFalse, out);
-    } else if (ts.isParenthesizedExpression(expr)) {
-        collectJsxFromExpression(expr.expression, out);
-    }
+    return collectClassNamesFromNode(openingAttrs, sourceFile, identifier);
 }
 
 /**
