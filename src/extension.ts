@@ -66,6 +66,36 @@ export function activate(context: vscode.ExtensionContext) {
     }
 }
 
+/**
+ * TSX 문서에서 identifier.className 패턴의 범위를 찾습니다.
+ * e.g. classNames=['panel', 'title'], identifier='styles'
+ *   → styles.panel, styles.title 이 있는 위치 전부 반환
+ */
+function findStyleReferencesInTsx(
+    document: vscode.TextDocument,
+    classNames: string[],
+    identifier: string
+): vscode.Range[] {
+    const text = document.getText();
+    const ranges: vscode.Range[] = [];
+
+    for (const className of classNames) {
+        const pattern = new RegExp(`${escapeRegex(identifier)}\\.${escapeRegex(className)}(?![a-zA-Z0-9_])`, 'g');
+        let match: RegExpExecArray | null;
+        while ((match = pattern.exec(text)) !== null) {
+            const start = document.positionAt(match.index);
+            const end = document.positionAt(match.index + match[0].length);
+            ranges.push(new vscode.Range(start, end));
+        }
+    }
+
+    return ranges;
+}
+
+function escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 async function updateHighlight(tsxEditor: vscode.TextEditor): Promise<void> {
     clearAllHighlights();
 
@@ -92,14 +122,22 @@ async function updateHighlight(tsxEditor: vscode.TextEditor): Promise<void> {
 
     const cssDocument = await vscode.workspace.openTextDocument(cssUri);
 
-    // 각 자식 그룹에 색상별 decoration 적용
+    // 각 자식 그룹에 색상별 decoration 적용 (CSS + TSX 양쪽)
     groups.forEach((group, index) => {
-        const ranges = group.classNames.flatMap(cls => findClassRanges(cssDocument, cls));
-        if (ranges.length === 0) { return; }
+        const cssRanges = group.classNames.flatMap(cls => findClassRanges(cssDocument, cls));
+        const tsxRanges = findStyleReferencesInTsx(document, group.classNames, identifier);
+
+        if (cssRanges.length === 0 && tsxRanges.length === 0) { return; }
 
         const decoration = createDecoration(index);
         activeDecorations.push(decoration);
-        cssEditor.setDecorations(decoration, ranges);
+
+        if (cssRanges.length > 0) {
+            cssEditor.setDecorations(decoration, cssRanges);
+        }
+        if (tsxRanges.length > 0) {
+            tsxEditor.setDecorations(decoration, tsxRanges);
+        }
     });
 }
 
