@@ -90,33 +90,13 @@ async function updateHighlight(tsxEditor: vscode.TextEditor): Promise<void> {
         return;
     }
 
-    // 현재 열려있는 CSS 에디터에 하이라이트 적용
-    // CSS 파일이 열려있는 탭의 에디터를 찾기
+    // 현재 화면에 보이는 CSS 에디터에만 하이라이트 적용
     const cssEditor = vscode.window.visibleTextEditors.find(
         e => e.document.uri.toString() === cssUri.toString()
     );
 
     if (cssEditor && highlightDecoration) {
         cssEditor.setDecorations(highlightDecoration, ranges);
-
-        // 첫 번째 매칭 위치로 reveal (스크롤)
-        cssEditor.revealRange(ranges[0], vscode.TextEditorRevealType.InCenterIfOutsideViewport);
-    } else {
-        // CSS 파일이 보이지 않으면 옆에 열기
-        await vscode.window.showTextDocument(cssUri, {
-            viewColumn: vscode.ViewColumn.Beside,
-            preserveFocus: true,
-            preview: false,
-        });
-
-        // 열린 후 하이라이트 적용
-        const newCssEditor = vscode.window.visibleTextEditors.find(
-            e => e.document.uri.toString() === cssUri.toString()
-        );
-        if (newCssEditor && highlightDecoration) {
-            newCssEditor.setDecorations(highlightDecoration, ranges);
-            newCssEditor.revealRange(ranges[0], vscode.TextEditorRevealType.InCenterIfOutsideViewport);
-        }
     }
 }
 
