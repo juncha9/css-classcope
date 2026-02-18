@@ -1,38 +1,47 @@
 import * as vscode from 'vscode';
 import { findCssModuleForTsx, findClassRanges } from './css-finder';
-import { getCssModuleImportIdentifier, getClassNamesInParentJsxBlock, getClassNamesAtCursor } from './tsx-parser';
+import { getCssModuleImportIdentifier, getChildGroupsAtCursor } from './tsx-parser';
 
-let highlightDecoration: vscode.TextEditorDecorationType | undefined;
+// 현재 활성화된 decoration 목록 (매 업데이트마다 교체)
+let activeDecorations: vscode.TextEditorDecorationType[] = [];
 
-function createHighlightDecoration(): vscode.TextEditorDecorationType {
-    const config = vscode.workspace.getConfiguration('styleCompass');
-    const color = config.get<string>('highlightColor', 'rgba(255, 200, 0, 0.3)');
+/**
+ * 골든 비율 기반 HSL 색상 생성기
+ * 자식 index를 받아서 시각적으로 잘 구분되는 색상을 반환합니다.
+ */
+function generateColor(index: number): { bg: string; border: string } {
+    const goldenAngle = 137.508; // 황금각 (도)
+    const hue = (index * goldenAngle) % 360;
+    return {
+        bg: `hsla(${hue.toFixed(0)}, 80%, 60%, 0.25)`,
+        border: `hsla(${hue.toFixed(0)}, 80%, 50%, 0.7)`,
+    };
+}
 
+function createDecoration(index: number): vscode.TextEditorDecorationType {
+    const { bg, border } = generateColor(index);
     return vscode.window.createTextEditorDecorationType({
-        backgroundColor: color,
-        border: '1px solid rgba(255, 200, 0, 0.6)',
+        backgroundColor: bg,
+        border: `1px solid ${border}`,
         borderRadius: '2px',
     });
 }
 
-export function activate(context: vscode.ExtensionContext) {
-    highlightDecoration = createHighlightDecoration();
+function clearAllHighlights(): void {
+    for (const dec of activeDecorations) {
+        dec.dispose();
+    }
+    activeDecorations = [];
+}
 
-    // 설정 변경 시 decoration 재생성
-    context.subscriptions.push(
-        vscode.workspace.onDidChangeConfiguration(e => {
-            if (e.affectsConfiguration('styleCompass.highlightColor')) {
-                highlightDecoration?.dispose();
-                highlightDecoration = createHighlightDecoration();
-            }
-        })
-    );
+export function activate(context: vscode.ExtensionContext) {
 
     // 커서 위치 변경 감지
     context.subscriptions.push(
         vscode.window.onDidChangeTextEditorSelection(async event => {
             const editor = event.textEditor;
             if (editor.document.languageId !== 'typescriptreact') {
+                clearAllHighlights();
                 return;
             }
             await updateHighlight(editor);
@@ -42,8 +51,8 @@ export function activate(context: vscode.ExtensionContext) {
     // 활성 에디터 변경 감지
     context.subscriptions.push(
         vscode.window.onDidChangeActiveTextEditor(async editor => {
+            clearAllHighlights();
             if (!editor || editor.document.languageId !== 'typescriptreact') {
-                clearAllHighlights();
                 return;
             }
             await updateHighlight(editor);
@@ -63,56 +72,37 @@ async function updateHighlight(tsxEditor: vscode.TextEditor): Promise<void> {
     const position = tsxEditor.selection.active;
     const document = tsxEditor.document;
 
-    // import identifier 찾기 (styles, cls 등)
+    // CSS Module import identifier 찾기 (styles, cls 등)
     const identifier = getCssModuleImportIdentifier(document);
-    if (!identifier) {
-        return;
-    }
+    if (!identifier) { return; }
 
-    // 1순위: AST 파싱으로 커서의 직접 부모 JSX 서브트리 전체 클래스명 추출
-    // 2순위: 커서가 className={...} 블록 위에 있을 때 정규식 기반 추출 (폴백)
-    let classNames = getClassNamesInParentJsxBlock(document, position, identifier);
-    if (classNames.length === 0) {
-        classNames = getClassNamesAtCursor(document, position, identifier);
-    }
-    if (classNames.length === 0) {
-        return;
-    }
+    // 커서 위치의 직접 자식 그룹 추출 (AST 기반)
+    const groups = getChildGroupsAtCursor(document, position, identifier);
+    if (groups.length === 0) { return; }
 
     // 대응하는 CSS Module 파일 찾기
     const cssUri = await findCssModuleForTsx(document.uri);
-    if (!cssUri) {
-        return;
-    }
+    if (!cssUri) { return; }
 
-    // CSS 파일 Document 열기 (탭은 열지 않음)
-    const cssDocument = await vscode.workspace.openTextDocument(cssUri);
-
-    // 모든 클래스명에 대한 하이라이트 범위 수집
-    const ranges = classNames.flatMap(cls => findClassRanges(cssDocument, cls));
-    if (ranges.length === 0) {
-        return;
-    }
-
-    // 현재 화면에 보이는 CSS 에디터에만 하이라이트 적용
+    // CSS 파일이 현재 화면에 보이는지 확인
     const cssEditor = vscode.window.visibleTextEditors.find(
         e => e.document.uri.toString() === cssUri.toString()
     );
+    if (!cssEditor) { return; }
 
-    if (cssEditor && highlightDecoration) {
-        cssEditor.setDecorations(highlightDecoration, ranges);
-    }
-}
+    const cssDocument = await vscode.workspace.openTextDocument(cssUri);
 
-function clearAllHighlights(): void {
-    if (!highlightDecoration) {
-        return;
-    }
-    for (const editor of vscode.window.visibleTextEditors) {
-        editor.setDecorations(highlightDecoration, []);
-    }
+    // 각 자식 그룹에 색상별 decoration 적용
+    groups.forEach((group, index) => {
+        const ranges = group.classNames.flatMap(cls => findClassRanges(cssDocument, cls));
+        if (ranges.length === 0) { return; }
+
+        const decoration = createDecoration(index);
+        activeDecorations.push(decoration);
+        cssEditor.setDecorations(decoration, ranges);
+    });
 }
 
 export function deactivate() {
-    highlightDecoration?.dispose();
+    clearAllHighlights();
 }
