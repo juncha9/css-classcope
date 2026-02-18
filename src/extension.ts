@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { findCssModuleForTsx, findClassRanges } from './css-finder';
-import { getCssModuleImportIdentifier, getClassNamesAtCursor } from './tsx-parser';
+import { getCssModuleImportIdentifier, getClassNamesInParentJsxBlock, getClassNamesAtCursor } from './tsx-parser';
 
 let highlightDecoration: vscode.TextEditorDecorationType | undefined;
 
@@ -69,8 +69,12 @@ async function updateHighlight(tsxEditor: vscode.TextEditor): Promise<void> {
         return;
     }
 
-    // 커서가 포함된 { } 블록 안의 모든 클래스명 추출
-    const classNames = getClassNamesAtCursor(document, position, identifier);
+    // 1순위: AST 파싱으로 커서의 직접 부모 JSX 서브트리 전체 클래스명 추출
+    // 2순위: 커서가 className={...} 블록 위에 있을 때 정규식 기반 추출 (폴백)
+    let classNames = getClassNamesInParentJsxBlock(document, position, identifier);
+    if (classNames.length === 0) {
+        classNames = getClassNamesAtCursor(document, position, identifier);
+    }
     if (classNames.length === 0) {
         return;
     }
