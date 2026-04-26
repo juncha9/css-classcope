@@ -2,7 +2,7 @@
     "name": "css-classcope",
     "displayName": "CSS Classcope",
     "description": "Bidirectionally highlights matching CSS Module classes between TSX and CSS/SCSS files",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "publisher": "alkemic-studio",
     "license": "MIT",
     "repository": {

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1] - 2026-04-27
+
+### Changed
+- Updated extension icon
+- Reorganized source layout
+- Updated README and documentation images
+
 ## [0.1.0] - 2026-04-26
 
 ### Added
