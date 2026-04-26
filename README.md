@@ -1,7 +1,17 @@
 # CSS Classcope 🔬
 
+[![VS Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/alkemic-studio.css-classcope?color=007ACC&logo=visual-studio-code&label=marketplace)](https://marketplace.visualstudio.com/items?itemName=alkemic-studio.css-classcope)
+[![VS Marketplace Installs](https://img.shields.io/visual-studio-marketplace/i/alkemic-studio.css-classcope?color=informational&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=alkemic-studio.css-classcope)
+[![VS Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/alkemic-studio.css-classcope?color=orange&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=alkemic-studio.css-classcope&ssr=false#review-details)
+[![GitHub stars](https://img.shields.io/github/stars/juncha9/css-classcope?color=f5d90a&logo=github)](https://github.com/juncha9/css-classcope/stargazers)
+[![last commit](https://img.shields.io/github/last-commit/juncha9/css-classcope?color=blueviolet&logo=github)](https://github.com/juncha9/css-classcope/commits/main)
+[![license](https://img.shields.io/github/license/juncha9/css-classcope?color=green)](./LICENSE.md)
+[![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ea4aaa?logo=github-sponsors)](https://github.com/sponsors/juncha9)
+  
 > Bidirectionally connects TSX / JSX and CSS Modules. Place your cursor on one side, and its counterpart on the other side is highlighted automatically.
-
+  
+![Usage](https://raw.githubusercontent.com/juncha9/css-classcope/main/docs/imgs/usage.gif)
+  
 ## Features
 
 - **TSX / JSX → CSS**: Hover the cursor over a `styles.foo` reference in a TSX or JSX file to highlight the `.foo` definition in the sibling `.module.css` / `.module.scss` file.
