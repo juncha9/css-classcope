@@ -1,27 +1,46 @@
 {
-    "name": "style-compass",
-    "displayName": "Style Compass",
-    "description": "Highlights the corresponding CSS/SCSS module class when your cursor is on a TSX element with a CSS module className",
-    "version": "0.0.1",
+    "name": "css-classcope",
+    "displayName": "CSS Classcope",
+    "description": "Bidirectionally highlights matching CSS Module classes between TSX and CSS/SCSS files",
+    "version": "0.1.0",
     "publisher": "alkemic-studio",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/juncha9/css-classcope"
+    },
+    "icon": "icon.png",
     "engines": {
         "vscode": "^1.109.0"
     },
     "categories": [
+        "Programming Languages",
+        "Visualization",
         "Other"
     ],
+    "keywords": [
+        "css",
+        "css modules",
+        "scss",
+        "tsx",
+        "react",
+        "highlight"
+    ],
     "activationEvents": [
-        "onLanguage:typescriptreact"
+        "onLanguage:typescriptreact",
+        "onLanguage:javascriptreact",
+        "onLanguage:css",
+        "onLanguage:scss"
     ],
     "main": "./dist/extension.js",
     "contributes": {
         "configuration": {
-            "title": "Style Compass",
+            "title": "CSS Classcope",
             "properties": {
-                "styleCompass.highlightColor": {
+                "cssClasscope.highlightColor": {
                     "type": "string",
                     "default": "rgba(255, 200, 0, 0.3)",
-                    "description": "Background color for CSS class highlight"
+                    "description": "Highlight color (used for background, outline, and overview ruler)"
                 }
             }
         }
@@ -37,7 +56,7 @@
         "typescript": "^5.9.3"
     },
     "devDependencies": {
-        "@types/node": "^22.0.0",
+        "@types/node": "^22.19.17",
         "@types/vscode": "^1.109.0",
         "@vscode/test-cli": "^0.0.12",
         "@vscode/test-electron": "^2.5.2"

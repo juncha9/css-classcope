@@ -1,35 +1,58 @@
-# Style Compass 🧭
+# CSS Classcope 🔬
 
-> TSX 파일에서 커서를 CSS Module 클래스 참조 위에 올리면, 대응하는 CSS/SCSS 파일에서 해당 클래스를 자동으로 하이라이트합니다.
+> Bidirectionally connects TSX / JSX and CSS Modules. Place your cursor on one side, and its counterpart on the other side is highlighted automatically.
 
-## 기능
+## Features
 
-- `.tsx` 파일에서 `styles.className` 패턴 커서 감지
-- 같은 이름의 `.module.css` 또는 `.module.scss` 파일 자동 탐색
-- 대응하는 CSS 클래스 정의를 하이라이트 & 자동 스크롤
-- CSS 파일이 열려있지 않으면 옆에 자동으로 열어줌
+- **TSX / JSX → CSS**: Hover the cursor over a `styles.foo` reference in a TSX or JSX file to highlight the `.foo` definition in the sibling `.module.css` / `.module.scss` file.
+- **CSS → TSX / JSX**: Hover the cursor over a `.foo` class definition in a CSS Module file to highlight the `styles.foo` references in the paired TSX / JSX file.
+- **Hover preview** 🔍: Hovering `styles.foo` in TSX / JSX shows the matching CSS Module rule body in a popup. Works even when the CSS file is not open.
+- **Go to Definition** 🎯: `Ctrl+Click` (or `F12`) on `styles.foo` in TSX / JSX jumps to the `.foo` declaration in the SCSS file.
+- **Overview ruler marker**: Even when matches are off-screen, markers on the right side of the scrollbar show their location.
 
-## 지원 패턴
+> ⚠️ **Bidirectional highlighting** only works when the counterpart file is already open in a visible editor (it does not open files automatically). The most natural setup is to keep both files side by side in a Split Editor. Hover and Go to Definition work even when the counterpart is closed.
+
+## Supported Patterns
 
 ```tsx
-import styles from './Button.module.css'; // 또는 .module.scss
+import styles from './Button.module.css'; // or .module.scss
 
-// 아래 패턴들에서 커서를 올리면 CSS 클래스 하이라이트
+// Highlights trigger when the cursor is on the patterns below
 <div className={styles.container}>
 <button className={styles.primaryBtn}>
 <span className={`${styles.icon} ${styles.active}`}>
 ```
 
-## 설정
-
-| 설정 | 기본값 | 설명 |
-|------|--------|------|
-| `styleCompass.highlightColor` | `rgba(255, 200, 0, 0.3)` | 하이라이트 배경색 |
-
-## 개발
-
-```bash
-npm install
-npm run compile
-# F5로 Extension Development Host 실행
+```scss
+// Same behavior when the cursor is on the CSS Module side
+.container { /* ... */ }
+.primaryBtn { /* ... */ }
 ```
+
+## Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `cssClasscope.highlightColor` | `rgba(255, 200, 0, 0.3)` | Highlight color (used for background, outline, and overview ruler) |
+
+## How it works
+
+- TSX / JSX side: Builds a JSX AST with the TypeScript compiler (using `ScriptKind.TSX` for `.tsx` and `ScriptKind.JSX` for `.jsx`) and extracts the `className` of the innermost JSX element under the cursor. The AST is cached per document version, so re-parsing cost is near zero.
+- CSS side: Matches `.className` declarations and references with regex. Recognizes SCSS nesting, pseudo-classes, and chained selectors.
+- Counterpart files are resolved by the same-directory, same-basename rule (`Button.tsx` / `Button.jsx` ↔ `Button.module.css` / `Button.module.scss`). When both `.tsx` and `.jsx` siblings exist, `.tsx` is preferred.
+
+## Requirements
+
+- VS Code `^1.109.0`
+- TSX (`.tsx`) or JSX (`.jsx`) source files
+- For bidirectional highlighting, keep both files open in visible editors (Hover / Go to Definition work even when closed).
+
+## Known Limitations
+
+- Only `import styles from '*.module.css'` style default imports are recognized (named imports are not supported).
+- Only `.tsx` and `.jsx` extensions are scanned (plain `.ts` / `.js` are not supported).
+- Plain CSS outside of CSS Modules is out of scope.
+
+## License
+
+[MIT](./LICENSE.md)

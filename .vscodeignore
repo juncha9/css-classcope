@@ -1,0 +1,30 @@
+# IDE/Editor
+.vscode/**
+.claude/**
+
+# Source files
+src/**
+
+# Sample files
+samples/**
+
+# Config files
+.gitignore
+.yarnrc
+**/tsconfig.json
+
+# Build artifacts
+**/*.map
+**/*.ts
+
+# Test files
+**/.vscode-test.*
+.vscode-test/**
+
+# Dependencies (only those needed at runtime are included via dependencies in package.json)
+# (vsce automatically excludes devDependencies)
+
+# Package files
+*.vsix
+
+[Dd]ocs/
